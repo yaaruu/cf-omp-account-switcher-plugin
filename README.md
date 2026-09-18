@@ -31,14 +31,20 @@ is linked to it, not copied.
 | `/cf_account_next` | Flip straight to the next account of the same provider, no menu. |
 | `/cf_account_list` | Show every account and the model currently in use. |
 
-The account menu lists each provider and login, marking the one in use:
+The account menu lists each provider and login, and marks each one's status —
+which is **in use**, which OMP has **rate-limited** (with time until it frees up),
+and which the switcher has **set aside**:
 
 ```
 Switch account / model
-❯ Claude (Anthropic): first@example.com — first@example.com's Organization
-  Claude (Anthropic): second@example.com — second@example.com's Organization  (in use)
-  ChatGPT (Codex): shan@example.com — prolite
+❯ Claude (Anthropic): first@example.com — first@example.com's Organization  (in use)
+  Claude (Anthropic): second@example.com — second@example.com's Organization  (rate-limited · free in 2h)
+  ChatGPT (Codex): shan@example.com — prolite  (set aside)
 ```
+
+So when a login gets rate-limited you can see it at a glance and pick another.
+`/cf_account_list` also prints a one-line count of how many logins are rate-limited
+right now.
 
 After you pick an account, if that provider offers more than one model you get a
 second menu to choose the model; the current model is marked. Picking the

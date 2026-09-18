@@ -24,6 +24,7 @@
  *     actually starts sending the next turn to that provider.
  */
 import {
+    accountStatus,
     describe,
     listAllAccounts,
     listSwitchable,
@@ -278,6 +279,12 @@ export default function accountSwitcher(pi) {
                 ? accounts.map(describe).join("\n")
                 : "No accounts are logged in.",
         ];
+        const limited = accounts.filter((a) => accountStatus(a).kind === "limited");
+        if (limited.length) {
+            lines.push(
+                `\n${limited.length} account${limited.length > 1 ? "s" : ""} rate-limited right now — switch to another with /cf_account_switch.`
+            );
+        }
         const model = currentModel(ctx);
         if (model) {
             lines.push(

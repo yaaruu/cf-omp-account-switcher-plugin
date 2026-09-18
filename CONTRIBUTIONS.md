@@ -60,3 +60,27 @@ primary is rate-limited** (OMP issues [#5912](https://github.com/can1357/oh-my-p
 rate-limit runtime event that cannot be verified in this environment, so it was
 **not implemented blind** (a half-working failover is worse than none). Left as a
 documented follow-up.
+
+## Feature implemented — rate-limit visibility (v1.2.0)
+
+
+- **What was requested:** users repeatedly hit provider rate-limits and want to
+  see/act on which login is limited. Related OMP threads:
+  [#5912](https://github.com/can1357/oh-my-pi/issues/5912) and
+  [#7031](https://github.com/can1357/oh-my-pi/issues/7031) (rate-limit failover),
+  and [#10733](https://github.com/can1357/oh-my-pi/issues/10733) (quota
+  exhaustion shown as a generic rate limit).
+- **Where:** OMP GitHub issues (no equivalent request found on Google/Reddit/SO/HN).
+- **What we implemented:** the switch menu and `/cf_account_list` now label every
+  account's status — `in use`, `rate-limited · free in <2h>` (with time until it
+  clears), or `set aside` (parked by the switcher). `/cf_account_list` also prints
+  a one-line count of how many logins are rate-limited right now. This tells apart
+  a real provider rate-limit (a short OMP-written block) from the switcher's own
+  long "set aside" block.
+- **New export:** `accountStatus(account)` in `accounts.js`.
+- **Not done (on purpose):** automatic failover — it needs a live rate-limit
+  runtime event we cannot verify in this environment, so it stays a follow-up
+  rather than shipping half-working. This feature makes the limit *visible* so the
+  manual switch (`/cf_account_switch`, `/cf_model`) is one glance away.
+- **Tested:** 13 checks via a Node + `sql.js` harness against OMP's real DB schema
+  (status classification, time formatting, list summary, and switch regression).

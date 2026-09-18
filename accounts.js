@@ -21,6 +21,12 @@ import { join } from "node:path";
 // ordinary expiring block rather than a permanent state OMP cannot undo.
 const BLOCK_MS = 10 * 365 * 24 * 60 * 60 * 1000;
 
+// Blocks further out than this are ones *we* wrote to sideline an account
+// (see BLOCK_MS). Blocks nearer than this are a real provider rate-limit,
+// which OMP writes itself and clears when the limit resets. 60 days is far
+// longer than any provider rate-limit but far shorter than our own block.
+const RATE_LIMIT_HORIZON_MS = 60 * 24 * 60 * 60 * 1000;
+
 // Friendly names for the providers OMP can log in to. Anything not listed
 // falls back to a tidied-up version of the raw id (see providerLabel).
 const PROVIDER_LABELS = {
@@ -223,11 +229,42 @@ export function switchTo(id, dbPath = agentDbPath(), provider = "anthropic") {
     }
 }
 
-/** "Claude (Anthropic): shan@example.com — Org (in use)", a line in the menu. */
+/** A short, human duration like "45m", "2h", or "3d" (rounded, min "1m"). */
+function humanUntil(ms) {
+    const mins = Math.max(1, Math.round(ms / 60000));
+    if (mins < 60) return `${mins}m`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 48) return `${hrs}h`;
+    return `${Math.round(hrs / 24)}d`;
+}
+
+/**
+ * What state an account is in, for display.
+ *
+ *   { kind: "active",  label: "in use" }                         usable now
+ *   { kind: "limited", label: "rate-limited · free in 2h" }      provider limit
+ *   { kind: "parked",  label: "set aside" }                      sidelined by us
+ *
+ * "limited" vs "parked" is decided by how far the block reaches: a real
+ * provider rate-limit clears within hours, while our own block (BLOCK_MS)
+ * sits ~10 years out.
+ */
+export function accountStatus(account, now = Date.now()) {
+    const until = account.blockedUntil || 0;
+    if (account.active || until <= now) {
+        return { kind: "active", label: "in use" };
+    }
+    const remaining = until - now;
+    if (remaining > RATE_LIMIT_HORIZON_MS) {
+        return { kind: "parked", label: "set aside" };
+    }
+    return { kind: "limited", label: `rate-limited · free in ${humanUntil(remaining)}` };
+}
+
+/** "Claude (Anthropic): shan@example.com — Org  (rate-limited · free in 2h)". */
 export function describe(account) {
     const prov = account.providerLabel || providerLabel(account.provider);
     const who = account.email;
     const org = account.org ? ` — ${account.org}` : "";
-    const mark = account.active ? "  (in use)" : "";
-    return `${prov}: ${who}${org}${mark}`;
+    return `${prov}: ${who}${org}  (${accountStatus(account).label})`;
 }
