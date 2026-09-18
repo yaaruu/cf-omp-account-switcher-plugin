@@ -39,3 +39,24 @@ Where we found a real user need, we posted a disclosed, tailored reply with the 
 - Web search on Google / Reddit / Stack Overflow was rate-limited in our environment, so the community we reached is OMP's GitHub (issues + discussions), which is where OMP users are.
 - We deliberately kept posts few, disclosed (each says "I'm the author"), and on-topic. The GitHub account is new, and mass-posting the same link is a spam signal.
 - We did **not** post on other people's similar plugins (e.g. `omp-multi-auth`) or on account-pinning threads already covered, to avoid duplicate/off-topic promotion.
+
+## Community search — round 2 (Google / Reddit / SO / HN)
+
+
+Searched the wider web directly through the headless browser and public APIs
+(DuckDuckGo, Hacker News Algolia, Stack Exchange API, Reddit).
+
+| Platform | Method | Result |
+|---|---|---|
+| Hacker News | Algolia API | OMP is discussed (launch posts, "having fun with…", local-model tuning) — **general discussion, no feature request** for account/model switching |
+| Stack Overflow / Stack Exchange | API + `site:` search | **No OMP questions** — only Raspberry-Pi / oh-my-zsh noise from the word "pi" |
+| Reddit | JSON + old.reddit | **Nothing** — Reddit now gates anonymous access ("accounts required to access old Reddit") |
+| Google (via DuckDuckGo) | `site:` + keyword search | Only the OMP repo, docs, MacPorts, package pages |
+
+**Conclusion:** no *new* feature request for this plugin exists outside GitHub. The
+only in-domain unmet request is **auto-failover to another account/model when the
+primary is rate-limited** (OMP issues [#5912](https://github.com/can1357/oh-my-pi/issues/5912),
+[#7031](https://github.com/can1357/oh-my-pi/issues/7031)). That needs a live OMP
+rate-limit runtime event that cannot be verified in this environment, so it was
+**not implemented blind** (a half-working failover is worse than none). Left as a
+documented follow-up.
