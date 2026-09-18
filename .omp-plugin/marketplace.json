@@ -1,0 +1,33 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "cf-account-switcher",
+  "owner": {
+    "name": "Akash00-git",
+    "email": "akash00.hit@gmail.com"
+  },
+  "metadata": {
+    "description": "Switch between logged-in OMP accounts and models without logging any of them out",
+    "version": "1.1.0"
+  },
+  "plugins": [
+    {
+      "name": "cf-account-switcher",
+      "description": "List every logged-in account and model (Claude, ChatGPT, Gemini, DeepSeek, ...) and switch to the one you want",
+      "source": "./",
+      "category": "productivity",
+      "version": "1.1.0",
+      "author": {
+        "name": "Akash00-git",
+        "email": "akash00.hit@gmail.com"
+      },
+      "license": "MIT",
+      "keywords": [
+        "accounts",
+        "models",
+        "oauth",
+        "account-switcher",
+        "model-switcher"
+      ]
+    }
+  ]
+}
