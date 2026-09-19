@@ -30,6 +30,7 @@ is linked to it, not copied.
 | `/cf_model` | Menu of every model you can run right now — pick a model/provider directly. |
 | `/cf_account_next` | Flip straight to the next account of the same provider, no menu. |
 | `/cf_account_list` | Show every account and the model currently in use. |
+| `/cf_chat_rename` | Rename the current chat/session — `/cf_chat_rename Billing bug fix` (or run it with no name to be asked). |
 
 The account menu lists each provider and login, and marks each one's status —
 which is **in use**, which OMP has **rate-limited** (with time until it frees up),

@@ -84,3 +84,17 @@ documented follow-up.
   manual switch (`/cf_account_switch`, `/cf_model`) is one glance away.
 - **Tested:** 13 checks via a Node + `sql.js` harness against OMP's real DB schema
   (status classification, time formatting, list summary, and switch regression).
+
+## Feature implemented — rename the current chat (v1.3.0)
+
+
+- **What was requested:** add a way to rename the current chat/session from the
+  plugin.
+- **What we implemented:** a new `/cf_chat_rename` command. It renames the
+  current session via OMP's `pi.setSessionName(...)`. The name comes from the
+  command argument (`/cf_chat_rename Billing bug fix`); with no argument it asks
+  through `ctx.ui.input` when the UI supports it. It ignores empty/unchanged
+  names and degrades gracefully on older OMP builds without `setSessionName`.
+- **Tested:** 10 checks via a Node harness with a mock `pi` (argument path,
+  prompt path, trimming, cancel, empty-name guidance, same-name no-op, and the
+  missing-API fallback).

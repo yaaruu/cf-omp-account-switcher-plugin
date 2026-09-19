@@ -16,6 +16,7 @@
  *   /cf_model            pick just a model/provider to use
  *   /cf_account_next     flip straight to the next same-provider account
  *   /cf_account_list     show every account and the model in use
+ *   /cf_chat_rename      rename the current chat/session
  *
  * Two independent switches happen here:
  *   - the account within a provider is chosen with a block (see accounts.js);
@@ -294,6 +295,54 @@ export default function accountSwitcher(pi) {
         ctx.ui.notify(lines.join("\n"), "info");
     }
 
+    /**
+     * Rename the current chat/session. The new name comes from the command
+     * argument (`/cf_chat_rename Billing bug`), or from a prompt when none is
+     * typed and the UI can ask.
+     */
+    async function renameChat(args, ctx) {
+        if (typeof pi.setSessionName !== "function") {
+            ctx.ui.notify(
+                "Renaming chats isn't supported in this OMP version.",
+                "info"
+            );
+            return;
+        }
+        const current =
+            typeof pi.getSessionName === "function"
+                ? String(pi.getSessionName() || "")
+                : "";
+        let name = String(args || "").trim();
+        if (!name && ctx.ui && typeof ctx.ui.input === "function") {
+            try {
+                const answer = await ctx.ui.input("Rename this chat", current);
+                if (answer == null) {
+                    return; // cancelled
+                }
+                name = String(answer).trim();
+            } catch {
+                name = "";
+            }
+        }
+        if (!name) {
+            ctx.ui.notify(
+                "Give the chat a name, e.g. /cf_chat_rename Billing bug fix.",
+                "info"
+            );
+            return;
+        }
+        if (name === current) {
+            ctx.ui.notify(`This chat is already called "${name}".`, "info");
+            return;
+        }
+        try {
+            await pi.setSessionName(name);
+            ctx.ui.notify(`Chat renamed to "${name}".`, "success");
+        } catch (err) {
+            ctx.ui.notify(`Could not rename the chat: ${err.message}`, "error");
+        }
+    }
+
     const handler = async (args, ctx) => {
         const word = String(args || "").trim().toLowerCase();
         if (word === "next" || word === "toggle") {
@@ -326,5 +375,9 @@ export default function accountSwitcher(pi) {
     pi.registerCommand("cf_account_list", {
         description: "CF Switcher — show every account and the model in use",
         handler: async (_args, ctx) => showList(ctx),
+    });
+    pi.registerCommand("cf_chat_rename", {
+        description: "CF Switcher — rename the current chat/session",
+        handler: renameChat,
     });
 }
