@@ -98,3 +98,25 @@ documented follow-up.
 - **Tested:** 10 checks via a Node harness with a mock `pi` (argument path,
   prompt path, trimming, cancel, empty-name guidance, same-name no-op, and the
   missing-API fallback).
+
+## Feature implemented — edit an earlier prompt (v1.4.0)
+
+
+- **What was requested:** OMP has no obvious "edit a previous message" button;
+  the user wanted to edit an earlier prompt and resend from that point.
+- **Feasibility check:** confirmed safe. OMP's session tree is append-only —
+  navigating to a past user message moves the active leaf to its parent and
+  hands the text back to the composer, then a resend starts a new branch. The
+  original prompt and replies are never deleted (reachable via `/tree`). OMP
+  already supports this natively through `/tree` / double-`Esc`.
+- **What we implemented:** a new `/cf_prompt_edit` command. It reads the current
+  branch (`ctx.sessionManager.getBranch()`), lists recent user prompts, and on
+  pick calls `ctx.navigateTree(id)` (leaf → parent, non-destructive) then
+  `ctx.ui.setEditorText(oldText)` so the prompt is ready to edit and resend. It
+  degrades gracefully when `navigateTree` is unavailable.
+- **Does not affect existing chat:** it only uses OMP's own append-only tree
+  navigation — no entries are edited or deleted.
+- **Tested:** 10 checks via a Node harness with mocked `ctx` (id selection,
+  text extraction from string and array content, newest-first listing, prefill,
+  cancel, empty history, and the missing-API fallback). Note: the live resend is
+  driven by OMP's tree and is best confirmed in a running session.

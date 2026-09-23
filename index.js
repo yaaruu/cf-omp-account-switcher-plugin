@@ -17,6 +17,7 @@
  *   /cf_account_next     flip straight to the next same-provider account
  *   /cf_account_list     show every account and the model in use
  *   /cf_chat_rename      rename the current chat/session
+ *   /cf_prompt_edit      edit an earlier prompt and resend from that point
  *
  * Two independent switches happen here:
  *   - the account within a provider is chosen with a block (see accounts.js);
@@ -91,6 +92,115 @@ function announce(ctx, account, model) {
     ctx.ui.notify(
         `Now using ${providerLabel(account.provider)}: ${account.email}${org}${modelPart}. ` +
             "Other accounts stay logged in.",
+        "success"
+    );
+}
+
+/** Collapse a prompt to one short line for the picker. */
+function oneLine(text, max) {
+    const t = String(text || "").replace(/\s+/g, " ").trim();
+    return t.length > max ? `${t.slice(0, max - 1)}…` : t;
+}
+
+/** The plain text of a user message entry, or "" if it carries none. */
+function userPromptText(entry) {
+    const content = entry && entry.message && entry.message.content;
+    if (typeof content === "string") {
+        return content;
+    }
+    if (Array.isArray(content)) {
+        return content
+            .map((block) =>
+                typeof block === "string"
+                    ? block
+                    : block && typeof block.text === "string"
+                      ? block.text
+                      : ""
+            )
+            .filter(Boolean)
+            .join("\n");
+    }
+    return "";
+}
+
+/**
+ * Edit an earlier prompt and resend from that point.
+ *
+ * This drives OMP's own session tree: navigating to a past user message moves
+ * the active leaf to that message's parent (append-only — nothing is deleted),
+ * then loads the old text into the composer so it can be edited and resent as a
+ * new branch. The original chat stays in the tree, reachable from `/tree`.
+ */
+async function editPrompt(ctx) {
+    if (typeof ctx.navigateTree !== "function") {
+        ctx.ui.notify(
+            "Editing a past prompt isn't supported in this OMP version.",
+            "info"
+        );
+        return;
+    }
+    if (typeof ctx.waitForIdle === "function") {
+        await ctx.waitForIdle();
+    }
+
+    let entries = [];
+    try {
+        if (ctx.sessionManager && typeof ctx.sessionManager.getBranch === "function") {
+            entries = ctx.sessionManager.getBranch() || [];
+        }
+    } catch (err) {
+        ctx.ui.notify(`Could not read the chat: ${err.message}`, "error");
+        return;
+    }
+
+    const prompts = entries
+        .filter(
+            (e) =>
+                e &&
+                e.type === "message" &&
+                e.message &&
+                e.message.role === "user"
+        )
+        .map((e) => ({ id: e.id, text: userPromptText(e) }))
+        .filter((p) => p.id && p.text.trim());
+    if (prompts.length === 0) {
+        ctx.ui.notify("There is no earlier prompt to edit yet.", "info");
+        return;
+    }
+
+    // Newest first, and don't flood the menu.
+    const recent = prompts.slice(-15).reverse();
+    const labels = recent.map((p, i) => `${i + 1}. ${oneLine(p.text, 70)}`);
+    const choice = await ctx.ui.select("Edit which prompt?", labels);
+    if (!choice) {
+        return; // cancelled
+    }
+    const picked = recent[labels.indexOf(choice)];
+    if (!picked) {
+        return;
+    }
+
+    try {
+        // Move the active branch back to just before that prompt. Non-destructive:
+        // the original prompt and its replies stay in the tree.
+        await ctx.navigateTree(picked.id);
+    } catch (err) {
+        ctx.ui.notify(`Could not go back to that prompt: ${err.message}`, "error");
+        return;
+    }
+
+    // Load the old prompt into the composer for editing (works whether or not
+    // navigateTree already restored the draft).
+    if (ctx.ui && typeof ctx.ui.setEditorText === "function") {
+        try {
+            ctx.ui.setEditorText(picked.text);
+        } catch {
+            // prefill is best-effort
+        }
+    }
+    ctx.ui.notify(
+        "Loaded your earlier prompt into the input box. Edit it and press Enter " +
+            "to resend from that point — your original chat stays saved (see /tree).",
         "success"
     );
 }
@@ -379,5 +489,9 @@ export default function accountSwitcher(pi) {
     pi.registerCommand("cf_chat_rename", {
         description: "CF Switcher — rename the current chat/session",
         handler: renameChat,
+    });
+    pi.registerCommand("cf_prompt_edit", {
+        description: "CF Switcher — edit an earlier prompt and resend from there",
+        handler: async (_args, ctx) => editPrompt(ctx),
     });
 }

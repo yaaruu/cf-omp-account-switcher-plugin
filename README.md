@@ -31,6 +31,7 @@ is linked to it, not copied.
 | `/cf_account_next` | Flip straight to the next account of the same provider, no menu. |
 | `/cf_account_list` | Show every account and the model currently in use. |
 | `/cf_chat_rename` | Rename the current chat/session — `/cf_chat_rename Billing bug fix` (or run it with no name to be asked). |
+| `/cf_prompt_edit` | Pick one of your earlier prompts, edit it, and resend from that point. Non-destructive — the original stays in the tree. |
 
 The account menu lists each provider and login, and marks each one's status —
 which is **in use**, which OMP has **rate-limited** (with time until it frees up),
@@ -51,6 +52,19 @@ After you pick an account, if that provider offers more than one model you get a
 second menu to choose the model; the current model is marked. Picking the
 account switches the login, and picking the model switches the provider/model
 OMP uses for your next turn.
+
+## Edit an earlier prompt
+
+`/cf_prompt_edit` lists your recent prompts; pick one and it loads that prompt's
+text back into the input box so you can add, remove, or change it and press Enter
+to **resend from that point**.
+
+This is safe. It drives OMP's own session tree, which is append-only: going back
+to an earlier prompt just moves the active branch to before it and starts a new
+branch when you resend. Your original prompt and its replies are never deleted —
+they stay in the tree and you can return to them with `/tree`. (OMP already
+supports the same thing natively via `/tree` or double-`Esc`; this command is a
+quicker, more obvious way in.)
 
 ## How switching works
 
