@@ -14,8 +14,7 @@
  * themselves are never modified - only the separate block table.
  */
 import { Database } from "bun:sqlite";
-import { homedir } from "node:os";
-import { join } from "node:path";
+import { getAgentDbPath } from "@oh-my-pi/pi-utils";
 
 // A block far enough out to mean "not this one", while still being an
 // ordinary expiring block rather than a permanent state OMP cannot undo.
@@ -71,12 +70,6 @@ export function providerLabel(provider) {
     return pretty || String(provider || "");
 }
 
-/** Where the credentials live, honouring `--profile` and the env override. */
-export function agentDbPath(env = process.env) {
-    const dir = env.PI_CODING_AGENT_DIR || join(homedir(), ".omp", "agent");
-    return join(dir, "agent.db");
-}
-
 function open(dbPath, readonly) {
     return new Database(dbPath, readonly ? { readonly: true } : undefined);
 }
@@ -87,7 +80,7 @@ function open(dbPath, readonly) {
  * `active` marks the account OMP may currently use: an account is inactive
  * only while a block is still in the future.
  */
-export function listAccounts(dbPath = agentDbPath(), provider = "anthropic") {
+export function listAccounts(dbPath = getAgentDbPath(), provider = "anthropic") {
     const db = open(dbPath, true);
     try {
         const now = Date.now();
@@ -97,27 +90,26 @@ export function listAccounts(dbPath = agentDbPath(), provider = "anthropic") {
             .all()) {
             blocked.set(row.credential_id, row.until);
         }
+        // Pull only the display fields out of the credential JSON inside SQLite,
+        // so access/refresh tokens never enter this process.
         const rows = db
             .query(
-                `SELECT id, data FROM auth_credentials
+                `SELECT id,
+                        CASE WHEN json_valid(data) THEN json_extract(data, '$.email') END AS email,
+                        CASE WHEN json_valid(data) THEN json_extract(data, '$.orgName') END AS org
+                   FROM auth_credentials
                   WHERE provider = ? AND credential_type = 'oauth'
                     AND disabled_cause IS NULL
                   ORDER BY created_at`
             )
             .all(provider);
         return rows.map((row) => {
-            let info = {};
-            try {
-                info = JSON.parse(row.data) || {};
-            } catch {
-                info = {};
-            }
             const until = blocked.get(row.id) || 0;
             return {
                 id: row.id,
                 provider,
-                email: info.email || `account ${row.id}`,
-                org: info.orgName || "",
+                email: typeof row.email === "string" && row.email ? row.email : `account ${row.id}`,
+                org: typeof row.org === "string" ? row.org : "",
                 active: until <= now,
                 blockedUntil: until > now ? until : null,
             };
@@ -133,7 +125,7 @@ export function listAccounts(dbPath = agentDbPath(), provider = "anthropic") {
  * Only providers holding more than one login are included: with a single
  * account there is nothing to switch to, and listing it would just be noise.
  */
-export function listSwitchable(dbPath = agentDbPath()) {
+export function listSwitchable(dbPath = getAgentDbPath()) {
     const db = open(dbPath, true);
     let providers = [];
     try {
@@ -160,7 +152,7 @@ export function listSwitchable(dbPath = agentDbPath()) {
  * let you pick which provider/account to work with. Each account carries a
  * `providerLabel` for display.
  */
-export function listAllAccounts(dbPath = agentDbPath()) {
+export function listAllAccounts(dbPath = getAgentDbPath()) {
     const db = open(dbPath, true);
     let providers = [];
     try {
@@ -191,7 +183,7 @@ export function listAllAccounts(dbPath = agentDbPath()) {
  * account for that provider, so a stale menu choice cannot block everything
  * and leave the provider unusable.
  */
-export function switchTo(id, dbPath = agentDbPath(), provider = "anthropic") {
+export function switchTo(id, dbPath = getAgentDbPath(), provider = "anthropic") {
     const accounts = listAccounts(dbPath, provider);
     const chosen = accounts.find((a) => a.id === id);
     if (!chosen) {

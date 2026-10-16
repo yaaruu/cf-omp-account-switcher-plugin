@@ -13,14 +13,15 @@ pick which account/model to work with. Nobody is ever logged out.
 ## Install
 
 ```
-unzip -o cf-omp-account-switcher-plugin.zip -d ~/omp-plugins
+git clone https://github.com/yaaruu/cf-omp-account-switcher-plugin ~/omp-plugins/cf-omp-account-switcher-plugin
 omp plugin install ~/omp-plugins/cf-omp-account-switcher-plugin
 ```
 
 Then restart OMP and type `/cf`.
 
 Keep the `~/omp-plugins/cf-omp-account-switcher-plugin` folder — a local install
-is linked to it, not copied.
+is linked to it, not copied, so anything you `git pull` into it runs on the next
+OMP start.
 
 ## Commands
 
@@ -28,7 +29,7 @@ is linked to it, not copied.
 |---|---|
 | `/cf_account_switch` | Menu of every logged-in account (all providers). Pick one, then pick its model. |
 | `/cf_model` | Menu of every model you can run right now — pick a model/provider directly. |
-| `/cf_account_next` | Flip straight to the next account of the same provider, no menu. |
+| `/cf_account_next` | Flip straight to the next account of the current model's provider (or the first provider with several logins), no menu. |
 | `/cf_account_list` | Show every account and the model currently in use. |
 | `/cf_chat_rename` | Rename the current chat/session — `/cf_chat_rename Billing bug fix` (or run it with no name to be asked). |
 | `/cf_prompt_edit` | Pick one of your earlier prompts, edit it, and resend from that point. Non-destructive — the original stays in the tree. |
@@ -81,6 +82,9 @@ using and clears it on the one you are.
 - The database's own triggers bump `auth_change_revision`, which is how a
   running OMP notices — no restart needed after a switch.
 - Switching back is the same command again.
+- Claude (Anthropic) and Z.ai can self-heal blocks: when a live usage report
+  shows a set-aside account has quota, OMP may clear its block and rotate back
+  to it. Run the switch again if that happens.
 
 **Model / provider** (Claude vs ChatGPT vs Gemini ...). Choosing a model calls
 OMP's own `setModel`, the same thing `/model` uses, so your next turn is sent to
@@ -101,8 +105,10 @@ and DeepSeek.
 ## Privacy
 
 No network calls, no child processes, no dependencies beyond OMP's own runtime.
-It reads only the account id, email and organisation name for the menu, and
-never reads or transmits access or refresh tokens.
+The account id, email and organisation name are extracted inside SQLite
+(`json_extract`), so access and refresh tokens are never loaded into the plugin
+or transmitted. The database is located with OMP's own `getAgentDbPath`, so
+`--profile` / `OMP_PROFILE` and XDG layouts are honoured.
 
 ## Uninstall
 

@@ -1,6 +1,6 @@
 {
   "name": "cf-omp-account-switcher-plugin",
-  "version": "1.4.0",
+  "version": "1.4.1",
   "description": "Switch between logged-in OMP accounts and models (Claude, ChatGPT, Gemini, DeepSeek, ...) without logging any of them out",
   "license": "MIT",
   "keywords": [

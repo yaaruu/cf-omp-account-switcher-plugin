@@ -351,7 +351,11 @@ export default function accountSwitcher(pi) {
         }
     }
 
-    /** No menu: go to the next same-provider account and say who it is. */
+    /**
+     * No menu: go to the next account of one provider and say who it is.
+     * Flips the provider of the current model when it has several logins,
+     * otherwise the first provider that does.
+     */
     async function next(ctx) {
         let accounts;
         try {
@@ -367,10 +371,16 @@ export default function accountSwitcher(pi) {
             );
             return;
         }
-        const here = accounts.findIndex((a) => a.active);
-        const target = accounts[(here + 1) % accounts.length];
+        const current = currentModel(ctx);
+        const provider =
+            current && accounts.some((a) => a.provider === current.provider)
+                ? current.provider
+                : accounts[0].provider;
+        const siblings = accounts.filter((a) => a.provider === provider);
+        const here = siblings.findIndex((a) => a.active);
+        const target = siblings[(here + 1) % siblings.length];
         try {
-            announce(ctx, switchTo(target.id, undefined, target.provider), null);
+            announce(ctx, switchTo(target.id, undefined, provider), null);
         } catch (err) {
             ctx.ui.notify(`Could not switch: ${err.message}`, "error");
         }
